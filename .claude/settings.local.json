@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 show:*)",
+      "Bash(pip install:*)",
+      "Bash(python3 -m py_compile cogs/leaderboard.py database.py riot_client.py cogs/registration.py cogs/admin.py bot.py)",
+      "Bash(python3 -m py_compile bot.py config.py database.py riot_client.py cogs/registration.py cogs/leaderboard.py cogs/admin.py)",
+      "Bash(ls -la /Users/ag/codin/tft-bot-claude/*.db*)"
+    ]
+  }
+}
