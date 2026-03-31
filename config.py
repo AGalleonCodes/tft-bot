@@ -10,7 +10,8 @@ RIOT_API_KEY: str = os.environ["RIOT_API_KEY"]
 DB_PATH: str = os.getenv("DB_PATH", "tft.db")
 CACHE_TTL: int = int(os.getenv("CACHE_TTL", "300"))  # seconds; default 5 minutes
 
-PLAYERS_PER_PAGE = 2
+PLAYERS_PER_PAGE = 10        # players per page for /leaderboard (ephemeral)
+AUTO_POST_PLAYERS_PER_PAGE = 100  # players shown in the auto-posted channel message
 
 # Maps our region key → Riot platform host (summoner/league endpoints)
 PLATFORM_HOSTS: dict[str, str] = {

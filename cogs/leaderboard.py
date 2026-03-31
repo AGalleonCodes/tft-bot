@@ -11,6 +11,7 @@ from discord.ext import commands
 
 from config import (
     PLAYERS_PER_PAGE,
+    AUTO_POST_PLAYERS_PER_PAGE,
     MEDALS,
     TIER_COLORS,
     format_rank,
@@ -90,6 +91,7 @@ def build_leaderboard_pages(
     rank_cache: dict[tuple[str, str], dict[str, Any]],
     guild_name: str,
     discord_members: dict[int, discord.Member],
+    players_per_page: int = PLAYERS_PER_PAGE,
 ) -> list[discord.Embed]:
     """
     Build a list of paginated Embed objects from sorted player rows.
@@ -111,19 +113,22 @@ def build_leaderboard_pages(
         return [empty]
 
     pages: list[discord.Embed] = []
-    total_pages = (len(rows) + PLAYERS_PER_PAGE - 1) // PLAYERS_PER_PAGE
-    updated_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    total_pages = (len(rows) + players_per_page - 1) // players_per_page
+    # Unix timestamp used for Discord's native <t:N:R> localized rendering
+    updated_unix = int(datetime.now(timezone.utc).timestamp())
+    # updated_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    # updated_ts = datetime.now(timezone.utc)
 
     # Accent color from the top player's tier
     top_cache = rank_cache.get((rows[0]["puuid"], "NA"))
     accent = TIER_COLORS.get((top_cache or {}).get("tier") or "", 0x2B2D31)
 
     for page_idx in range(total_pages):
-        chunk = rows[page_idx * PLAYERS_PER_PAGE : (page_idx + 1) * PLAYERS_PER_PAGE]
+        chunk = rows[page_idx * players_per_page : (page_idx + 1) * players_per_page]
         lines: list[str] = []
 
         for offset, reg in enumerate(chunk):
-            position = page_idx * PLAYERS_PER_PAGE + offset + 1
+            position = page_idx * players_per_page + offset + 1
             medal = MEDALS.get(position, f"`#{position:02d}`")
 
             cache = rank_cache.get((reg["puuid"], "NA"))
@@ -148,13 +153,18 @@ def build_leaderboard_pages(
 
             lines.append(line)
 
+        # <t:N:R> renders as "2 minutes ago" in each viewer's local timezone.
+        # <t:N:f> renders as "March 31, 2026 at 10:00 AM" localized.
+        # Discord only localizes timestamps in description/fields, not footer text.
+        description = "\n\n".join(lines) + f"\n\n-# Updated <t:{updated_unix}:R>"
+
         embed = discord.Embed(
             title=f"🎮 TFT Leaderboard — {guild_name}",
-            description="\n\n".join(lines),
+            description=description,
             color=accent,
         )
         embed.set_footer(
-            text=f"Page {page_idx + 1}/{total_pages} · {len(rows)} players · Updated {updated_ts}"
+            text=f"Page {page_idx + 1}/{total_pages} · {len(rows)} players"
         )
         embed.set_image(url="https://greekgamingacademy.gr/wp-content/uploads/2023/10/Every-TFT-Set.jpg")
         embed.set_thumbnail(url="https://yt3.googleusercontent.com/Nw2kKyqls4sc8kTQWwfIEBAl_Igg-94HgBwdDGDPcK5OuH9vN7svRyHe2Dv6ojY17AJSnGLfTw=s900-c-k-c0x00ffffff-no-rj")
@@ -172,7 +182,7 @@ class Leaderboard(commands.Cog):
         self.bot = bot
 
     async def _build_guild_pages(
-        self, guild: discord.Guild
+        self, guild: discord.Guild, players_per_page: int = PLAYERS_PER_PAGE
     ) -> list[discord.Embed]:
         """Fetch all data for a guild, refresh stale entries, and build embed pages."""
         registrations = await self.bot.db.get_all_registrations(guild.id)
@@ -232,7 +242,7 @@ class Leaderboard(commands.Cog):
         }
 
         return build_leaderboard_pages(
-            sorted_regs, linked_map, rank_cache, guild.name, member_map
+            sorted_regs, linked_map, rank_cache, guild.name, member_map, players_per_page
         )
 
     # ------------------------------------------------------------------ #
@@ -372,7 +382,7 @@ class Leaderboard(commands.Cog):
         Post or edit the leaderboard in the given channel.
         Returns the message id of the posted/edited message.
         """
-        pages = await self._build_guild_pages(guild)
+        pages = await self._build_guild_pages(guild, players_per_page=AUTO_POST_PLAYERS_PER_PAGE)
         embed = pages[0]
         # Add page count hint to footer for auto-posts
         if len(pages) > 1:
