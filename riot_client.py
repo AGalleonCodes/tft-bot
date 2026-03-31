@@ -48,6 +48,7 @@ class RiotClient:
                 if resp.status == 403:
                     raise RiotAPIError(403, "API key forbidden — check your Riot developer key")
                 if resp.status == 401:
+                    log.info("401 response: %s", resp)
                     raise RiotAPIError(401, "API key unauthorized — key may be expired")
                 text = await resp.text()
                 raise RiotAPIError(resp.status, text[:200])

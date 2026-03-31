@@ -105,7 +105,7 @@ def build_leaderboard_pages(
     """
     if not rows:
         empty = discord.Embed(
-            title=f"🎮 TFT Leaderboard — {guild_name}",
+            title=f"☀️ Bootcamp Leaderboard",
             description="No players registered yet.\nUse `/register` to join the leaderboard!",
             color=0x2B2D31,
         )
@@ -160,7 +160,7 @@ def build_leaderboard_pages(
         description = "\n\n".join(lines) + f"\n\n-# Updated <t:{updated_unix}:R>"
 
         embed = discord.Embed(
-            title=f"🎮 TFT Leaderboard — {guild_name}",
+            title=f"☀️ Bootcamp Leaderboard",
             description=description,
             color=accent,
         )
@@ -196,7 +196,7 @@ class Leaderboard(commands.Cog):
         if not registrations:
             return [
                 discord.Embed(
-                    title=f"🎮 TFT Leaderboard — {guild.name}",
+                    title=f"☀️ Bootcamp Leaderboard",
                     description="No players registered yet. Use `/register` to join!",
                     color=0x2B2D31,
                 )
