@@ -166,8 +166,14 @@ def build_leaderboard_pages(
         embed.set_footer(
             text=f"Page {page_idx + 1}/{total_pages} · {len(rows)} players"
         )
-        embed.set_image(url="https://greekgamingacademy.gr/wp-content/uploads/2023/10/Every-TFT-Set.jpg")
-        embed.set_thumbnail(url="https://yt3.googleusercontent.com/Nw2kKyqls4sc8kTQWwfIEBAl_Igg-94HgBwdDGDPcK5OuH9vN7svRyHe2Dv6ojY17AJSnGLfTw=s900-c-k-c0x00ffffff-no-rj")
+        # embed.set_image(url="https://greekgamingacademy.gr/wp-content/uploads/2023/10/Every-TFT-Set.jpg")
+        # embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488455221368590487/image.png?ex=69ccd772&is=69cb85f2&hm=f095c908f9d7e7afc671ec880abdcff93c7f89179376bebac782e238fca6d55b&")
+        # embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488458385253728276/image.png?ex=69ccda65&is=69cb88e5&hm=53d214cdd4ad1360c390287edbc2826aca5fae39d7109ed4a2f7c6d0cd69ccbd&")
+        embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488459492730474618/image.png?ex=69ccdb6d&is=69cb89ed&hm=2e9ffb4bb0e511c8fce507e822b6a44a2f6c68561175bfe7154ad6a349427c56&")
+        # embed.set_thumbnail(url="https://yt3.googleusercontent.com/Nw2kKyqls4sc8kTQWwfIEBAl_Igg-94HgBwdDGDPcK5OuH9vN7svRyHe2Dv6ojY17AJSnGLfTw=s900-c-k-c0x00ffffff-no-rj")
+        # embed.set_thumbnail(url="https://media.discordapp.net/attachments/1259591457040502788/1488457138803179670/image.png?ex=69ccd93c&is=69cb87bc&hm=10caadab2daa23c72d4c995c68e292a2eaa34648e8a9b38e8902efcaae6f1188&=&format=webp&quality=lossless&width=1334&height=1330")
+        # embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488456636094877716/hi_112.png?ex=69ccd8c4&is=69cb8744&hm=409fa379b0d321bafb871dbf0ff3c56d57d855d44a9c8324d63a8c8e8d4cb701&")
+        embed.set_thumbnail(url="https://media.discordapp.net/attachments/1259591457040502788/1488461433099386980/Your_paragraph_text_12.png?ex=69ccdd3b&is=69cb8bbb&hm=6b6b56d571618694816ce6ac5e651f70fc4c8653afcc34bd4522209e45578d00&=&format=webp&quality=lossless")
         pages.append(embed)
 
     return pages

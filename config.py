@@ -47,26 +47,44 @@ VALID_REGIONS = list(PLATFORM_HOSTS.keys())
 
 # Ordered lowest → highest for scoring
 TIER_ORDER: list[str] = [
-    "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+    "UNRANKED", "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
     "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER",
 ]
+# TIER_ORDER: list[str] = [
+#     "IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM",
+#     "EMERALD", "DIAMOND", "MASTER", "GRANDMASTER", "CHALLENGER",
+# ]
 RANK_ORDER: list[str] = ["IV", "III", "II", "I"]
 
 TIER_EMOJIS: dict[str, str] = {
-    "IRON": "⬛",
-    "BRONZE": "🟫",
-    "SILVER": "⬜",
-    "GOLD": "🟨",
-    "PLATINUM": "🩵",
-    "EMERALD": "💚",
-    "DIAMOND": "💙",
-    "MASTER": "🟣",
-    "GRANDMASTER": "🟥",
-    "CHALLENGER": "⭐",
+    "UNRANKED": "<:TFT_Unranked:1488456833730478110>",
+    "IRON": "<:TFT_Iron:1488456829393698958>",
+    "BRONZE": "<:TFT_Bronze:1488456823987109908>",
+    "SILVER": "<:TFT_Silver:1488456832803405864>",
+    "GOLD": "<:TFT_Gold:1488456827300483212>",
+    "PLATINUM": "<:TFT_Platinum:1488456831318884383>",
+    "EMERALD": "<:TFT_Emerald:1488456826256363581>",
+    "DIAMOND": "<:TFT_Diamond:1488456825501257859>",
+    "MASTER": "<:TFT_Master:1488456830488154263>",
+    "GRANDMASTER": "<:TFT_Grandmaster:1488456828600975400>",
+    "CHALLENGER": "<:TFT_Challenger:1488456824821649408>",
 }
+# TIER_EMOJIS: dict[str, str] = {
+#     "IRON": "⬛",
+#     "BRONZE": "🟫",
+#     "SILVER": "⬜",
+#     "GOLD": "🟨",
+#     "PLATINUM": "🩵",
+#     "EMERALD": "💚",
+#     "DIAMOND": "💙",
+#     "MASTER": "🟣",
+#     "GRANDMASTER": "🟥",
+#     "CHALLENGER": "⭐",
+# }
 
 # Embed accent color per top-ranked tier
 TIER_COLORS: dict[str, int] = {
+    "UNRANKED": 0x2B2D31,
     "IRON": 0x8B8B8B,
     "BRONZE": 0xCD7F32,
     "SILVER": 0xC0C0C0,
@@ -92,7 +110,8 @@ def rank_score(tier: str | None, division: str | None, lp: int) -> int:
 def format_rank(tier: str | None, division: str | None, lp: int) -> str:
     """Return a human-readable rank string."""
     if not tier:
-        return "Unranked"
+        emoji = TIER_EMOJIS.get("UNRANKED", "")
+        return f"{emoji} Unranked".strip()
     emoji = TIER_EMOJIS.get(tier, "")
     tier_str = tier.title()
     if tier in ("MASTER", "GRANDMASTER", "CHALLENGER"):
