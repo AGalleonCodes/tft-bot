@@ -244,15 +244,15 @@ class Leaderboard(commands.Cog):
         description="Show the TFT rank leaderboard for this server.",
     )
     async def leaderboard(self, interaction: discord.Interaction) -> None:
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
 
         pages = await self._build_guild_pages(interaction.guild)
 
         if len(pages) == 1:
-            await interaction.followup.send(embed=pages[0])
+            await interaction.followup.send(embed=pages[0], ephemeral=True)
         else:
             view = PaginatedLeaderboard(pages)
-            await interaction.followup.send(embed=pages[0], view=view)
+            await interaction.followup.send(embed=pages[0], view=view, ephemeral=True)
 
     # ------------------------------------------------------------------ #
     # /rank                                                                 #
