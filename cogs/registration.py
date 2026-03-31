@@ -69,7 +69,7 @@ class Registration(commands.Cog):
         )
 
         rank_str = format_rank(data["tier"], data["division"], data["lp"])
-        color = TIER_COLORS.get(data["tier"] or "", 0x2B2D31)
+        color = TIER_COLORS.get(data["tier"] or "UNRANKED", 0x2B2D31)
         embed = discord.Embed(
             title="✅ Registered!",
             description=(
@@ -187,7 +187,7 @@ class Registration(commands.Cog):
                 f"**{data['game_name']}#{data['tag_line']}** ({region}) will appear "
                 "alongside your NA rank on the leaderboard."
             ),
-            color=TIER_COLORS.get(data["tier"] or "", 0x2B2D31),
+            color=TIER_COLORS.get(data["tier"] or "UNRANKED", 0x2B2D31),
         )
         embed.add_field(name=f"{region} Rank", value=rank_str, inline=True)
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -253,7 +253,7 @@ class Registration(commands.Cog):
         embed = discord.Embed(
             title=f"Accounts for {interaction.user.display_name}",
             color=TIER_COLORS.get(
-                (na_cache or {}).get("tier") or "", 0x2B2D31
+                (na_cache or {}).get("tier") or "UNRANKED", 0x2B2D31
             ),
         )
         embed.add_field(

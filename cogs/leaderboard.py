@@ -121,7 +121,8 @@ def build_leaderboard_pages(
 
     # Accent color from the top player's tier
     top_cache = rank_cache.get((rows[0]["puuid"], "NA"))
-    accent = TIER_COLORS.get((top_cache or {}).get("tier") or "", 0x2B2D31)
+    # accent = TIER_COLORS.get((top_cache or {}).get("tier") or "UNRANKED", 0x2B2D31)
+    accent = TIER_COLORS.get("KATE", 0x2B2D31)
 
     for page_idx in range(total_pages):
         chunk = rows[page_idx * players_per_page : (page_idx + 1) * players_per_page]
@@ -321,7 +322,7 @@ class Leaderboard(commands.Cog):
         losses = (na_cache or {}).get("losses", 0)
 
         rank_str = format_rank(tier, division, lp)
-        color = TIER_COLORS.get(tier or "", 0x2B2D31)
+        color = TIER_COLORS.get(tier or "UNRANKED", 0x2B2D31)
 
         embed = discord.Embed(
             title=f"{reg['game_name']}#{reg['tag_line']}",

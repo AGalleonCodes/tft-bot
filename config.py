@@ -84,6 +84,7 @@ TIER_EMOJIS: dict[str, str] = {
 
 # Embed accent color per top-ranked tier
 TIER_COLORS: dict[str, int] = {
+    "KATE": 0xF3A7AC,
     "UNRANKED": 0x2B2D31,
     "IRON": 0x8B8B8B,
     "BRONZE": 0xCD7F32,
