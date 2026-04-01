@@ -40,7 +40,7 @@ REGIONAL_HOSTS: dict[str, str] = {
     "EUNE": "europe.api.riotgames.com",
     "TR": "europe.api.riotgames.com",
     "RU": "europe.api.riotgames.com",
-    "OCE": "sea.api.riotgames.com",
+    "OCE": "asia.api.riotgames.com",
 }
 
 VALID_REGIONS = list(PLATFORM_HOSTS.keys())
