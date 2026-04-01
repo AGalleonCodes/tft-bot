@@ -82,7 +82,7 @@ def _linked_suffix(
             else "Unranked"
         )
         parts.append(f"**{acct['region']}:** {acct['game_name']}#{acct['tag_line']} — {rank_str}")
-    return "\n".join(f"↳ {p}" for p in parts) if parts else ""
+    return "\n".join(f"\t↳ {p}" for p in parts) if parts else ""
 
 
 def build_leaderboard_pages(
@@ -103,7 +103,7 @@ def build_leaderboard_pages(
     """
     if not rows:
         empty = discord.Embed(
-            title=f"☀️ Bootcamp Leaderboard",
+            title=f"☀️  Bootcamp Leaderboard ☀️",
             description="No players registered yet.\nUse `/register` to join the leaderboard!",
             color=0x2B2D31,
         )
@@ -151,7 +151,7 @@ def build_leaderboard_pages(
         description = "\n\n".join(lines) + f"\n\n-# Updated <t:{updated_unix}:R>"
 
         embed = discord.Embed(
-            title=f"☀️ Bootcamp Leaderboard",
+            title=f"☀️  Bootcamp Leaderboard ☀️",
             description=description,
             color=accent,
         )
@@ -181,7 +181,7 @@ class Leaderboard(commands.Cog):
         if not registrations:
             return [
                 discord.Embed(
-                    title=f"☀️ Bootcamp Leaderboard",
+                    title=f"☀️  Bootcamp Leaderboard ☀️",
                     description="No players registered yet. Use `/register` to join!",
                     color=0x2B2D31,
                 )
