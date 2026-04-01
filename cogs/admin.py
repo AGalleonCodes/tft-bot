@@ -32,7 +32,7 @@ class Admin(commands.Cog):
     async def set_channel(
         self,
         interaction: discord.Interaction,
-        channel: Optional[discord.TextChannel] = None,
+        channel: Optional[discord.abc.GuildChannel] = None,
     ) -> None:
         target = channel or interaction.channel
         if not isinstance(target, discord.TextChannel):
@@ -130,7 +130,7 @@ class Admin(commands.Cog):
             return
 
         msg_id = await leaderboard_cog.post_leaderboard_to_channel(
-            channel, interaction.guild, settings.get("last_message_id")
+            channel, settings.get("last_message_id")
         )
         await self.bot.db.upsert_guild_settings(
             interaction.guild_id,
@@ -147,18 +147,18 @@ class Admin(commands.Cog):
 
     @app_commands.command(
         name="force-refresh",
-        description="Force-refresh all player ranks from Riot API for this server.",
+        description="Force-refresh all player ranks from Riot API.",
     )
     @app_commands.default_permissions(manage_guild=True)
     async def force_refresh(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        await self.bot.db.invalidate_guild_cache(interaction.guild_id)
+        await self.bot.db.invalidate_all_cache()
 
-        registrations = await self.bot.db.get_all_registrations(interaction.guild_id)
+        registrations = await self.bot.db.get_all_registrations()
         if not registrations:
             await interaction.followup.send(
-                "No players registered on this server.", ephemeral=True
+                "No players registered on the leaderboard.", ephemeral=True
             )
             return
 
@@ -178,9 +178,7 @@ class Admin(commands.Cog):
                     rank["lp"], rank["wins"], rank["losses"],
                 )
                 # Also refresh linked accounts
-                linked = await self.bot.db.get_linked_accounts(
-                    interaction.guild_id, reg["discord_id"]
-                )
+                linked = await self.bot.db.get_linked_accounts(reg["discord_id"])
                 for acct in linked:
                     try:
                         r = await self.bot.riot.refresh_rank(
@@ -211,16 +209,14 @@ class Admin(commands.Cog):
 
     @app_commands.command(
         name="remove-player",
-        description="Remove a player from this server's leaderboard (admin only).",
+        description="Remove a player from the global leaderboard (admin only).",
     )
     @app_commands.describe(member="The Discord member to remove")
     @app_commands.default_permissions(manage_guild=True)
     async def remove_player(
         self, interaction: discord.Interaction, member: discord.Member
     ) -> None:
-        removed = await self.bot.db.delete_registration(
-            interaction.guild_id, member.id
-        )
+        removed = await self.bot.db.delete_registration(member.id)
         if removed:
             await interaction.response.send_message(
                 f"✅ **{member.display_name}** has been removed from the leaderboard.",
@@ -228,7 +224,7 @@ class Admin(commands.Cog):
             )
         else:
             await interaction.response.send_message(
-                f"**{member.display_name}** is not registered on this leaderboard.",
+                f"**{member.display_name}** is not registered on the leaderboard.",
                 ephemeral=True,
             )
 
@@ -243,7 +239,7 @@ class Admin(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     async def leaderboard_status(self, interaction: discord.Interaction) -> None:
         settings = await self.bot.db.get_guild_settings(interaction.guild_id)
-        registrations = await self.bot.db.get_all_registrations(interaction.guild_id)
+        registrations = await self.bot.db.get_all_registrations()
 
         embed = discord.Embed(title="⚙️ Leaderboard Configuration", color=0x5865F2)
 
@@ -263,7 +259,7 @@ class Admin(commands.Cog):
             )
 
         embed.add_field(
-            name="Registered Players",
+            name="Registered Players (Global)",
             value=str(len(registrations)),
             inline=True,
         )

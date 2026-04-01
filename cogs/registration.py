@@ -22,7 +22,7 @@ class Registration(commands.Cog):
 
     @app_commands.command(
         name="register",
-        description="Register your NA TFT account to this server's leaderboard.",
+        description="Register your NA TFT account to the global leaderboard.",
     )
     @app_commands.describe(
         game_name="Your Riot Games username (the part before #)",
@@ -52,7 +52,6 @@ class Registration(commands.Cog):
             return
 
         await self.bot.db.upsert_registration(
-            guild_id=interaction.guild_id,
             discord_id=interaction.user.id,
             game_name=data["game_name"],
             tag_line=data["tag_line"],
@@ -74,7 +73,7 @@ class Registration(commands.Cog):
             title="✅ Registered!",
             description=(
                 f"**{data['game_name']}#{data['tag_line']}** has been added to "
-                f"**{interaction.guild.name}**'s TFT leaderboard."
+                "the TFT leaderboard."
             ),
             color=color,
         )
@@ -97,19 +96,17 @@ class Registration(commands.Cog):
 
     @app_commands.command(
         name="unregister",
-        description="Remove yourself from this server's TFT leaderboard.",
+        description="Remove yourself from the TFT leaderboard.",
     )
     async def unregister(self, interaction: discord.Interaction) -> None:
-        removed = await self.bot.db.delete_registration(
-            interaction.guild_id, interaction.user.id
-        )
+        removed = await self.bot.db.delete_registration(interaction.user.id)
         if removed:
             await interaction.response.send_message(
-                "You have been removed from this server's leaderboard.", ephemeral=True
+                "You have been removed from the leaderboard.", ephemeral=True
             )
         else:
             await interaction.response.send_message(
-                "You are not registered on this server's leaderboard.", ephemeral=True
+                "You are not registered on the leaderboard.", ephemeral=True
             )
 
     # ------------------------------------------------------------------ #
@@ -137,10 +134,8 @@ class Registration(commands.Cog):
     ) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        # Must be registered on this server first
-        reg = await self.bot.db.get_registration(
-            interaction.guild_id, interaction.user.id
-        )
+        # Must be registered first
+        reg = await self.bot.db.get_registration(interaction.user.id)
         if not reg:
             await interaction.followup.send(
                 "You need to `/register` your NA account before linking other regions.",
@@ -163,7 +158,6 @@ class Registration(commands.Cog):
             return
 
         await self.bot.db.upsert_linked_account(
-            guild_id=interaction.guild_id,
             discord_id=interaction.user.id,
             region=region,
             game_name=data["game_name"],
@@ -207,9 +201,7 @@ class Registration(commands.Cog):
     async def unlink_region(
         self, interaction: discord.Interaction, region: str
     ) -> None:
-        removed = await self.bot.db.delete_linked_account(
-            interaction.guild_id, interaction.user.id, region
-        )
+        removed = await self.bot.db.delete_linked_account(interaction.user.id, region)
         if removed:
             await interaction.response.send_message(
                 f"Your **{region}** linked account has been removed.", ephemeral=True
@@ -230,9 +222,7 @@ class Registration(commands.Cog):
     async def my_accounts(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        reg = await self.bot.db.get_registration(
-            interaction.guild_id, interaction.user.id
-        )
+        reg = await self.bot.db.get_registration(interaction.user.id)
         if not reg:
             await interaction.followup.send(
                 "You are not registered. Use `/register` to add your NA account.",
@@ -262,9 +252,7 @@ class Registration(commands.Cog):
             inline=False,
         )
 
-        linked = await self.bot.db.get_linked_accounts(
-            interaction.guild_id, interaction.user.id
-        )
+        linked = await self.bot.db.get_linked_accounts(interaction.user.id)
         for acct in linked:
             cache = await self.bot.db.get_rank_cache(acct["puuid"], acct["region"])
             rank_str = (

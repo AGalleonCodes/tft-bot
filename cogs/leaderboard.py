@@ -89,8 +89,7 @@ def build_leaderboard_pages(
     rows: list[dict[str, Any]],
     linked_map: dict[int, list[dict[str, Any]]],
     rank_cache: dict[tuple[str, str], dict[str, Any]],
-    guild_name: str,
-    discord_members: dict[int, discord.Member],
+    discord_users: dict[int, discord.User | discord.Member],
     players_per_page: int = PLAYERS_PER_PAGE,
 ) -> list[discord.Embed]:
     """
@@ -100,8 +99,7 @@ def build_leaderboard_pages(
         rows: Sorted list of registration dicts (highest rank first).
         linked_map: discord_id → list of linked account dicts.
         rank_cache: (puuid, region) → rank_cache dict.
-        guild_name: Display name for the embed title.
-        discord_members: discord_id → discord.Member for display names.
+        discord_users: discord_id → discord.User or Member for display names.
     """
     if not rows:
         empty = discord.Embed(
@@ -116,12 +114,7 @@ def build_leaderboard_pages(
     total_pages = (len(rows) + players_per_page - 1) // players_per_page
     # Unix timestamp used for Discord's native <t:N:R> localized rendering
     updated_unix = int(datetime.now(timezone.utc).timestamp())
-    # updated_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    # updated_ts = datetime.now(timezone.utc)
 
-    # Accent color from the top player's tier
-    top_cache = rank_cache.get((rows[0]["puuid"], "NA"))
-    # accent = TIER_COLORS.get((top_cache or {}).get("tier") or "UNRANKED", 0x2B2D31)
     accent = TIER_COLORS.get("KATE", 0x2B2D31)
 
     for page_idx in range(total_pages):
@@ -139,8 +132,8 @@ def build_leaderboard_pages(
                 else "Unranked"
             )
 
-            member = discord_members.get(reg["discord_id"])
-            display_name = member.display_name if member else f"<@{reg['discord_id']}>"
+            user = discord_users.get(reg["discord_id"])
+            display_name = user.display_name if user else f"<@{reg['discord_id']}>"
 
             line = (
                 f"{medal} **{reg['game_name']}#{reg['tag_line']}** — {rank_str}\n"
@@ -155,8 +148,6 @@ def build_leaderboard_pages(
             lines.append(line)
 
         # <t:N:R> renders as "2 minutes ago" in each viewer's local timezone.
-        # <t:N:f> renders as "March 31, 2026 at 10:00 AM" localized.
-        # Discord only localizes timestamps in description/fields, not footer text.
         description = "\n\n".join(lines) + f"\n\n-# Updated <t:{updated_unix}:R>"
 
         embed = discord.Embed(
@@ -167,13 +158,7 @@ def build_leaderboard_pages(
         embed.set_footer(
             text=f"Page {page_idx + 1}/{total_pages} · {len(rows)} players"
         )
-        # embed.set_image(url="https://greekgamingacademy.gr/wp-content/uploads/2023/10/Every-TFT-Set.jpg")
-        # embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488455221368590487/image.png?ex=69ccd772&is=69cb85f2&hm=f095c908f9d7e7afc671ec880abdcff93c7f89179376bebac782e238fca6d55b&")
-        # embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488458385253728276/image.png?ex=69ccda65&is=69cb88e5&hm=53d214cdd4ad1360c390287edbc2826aca5fae39d7109ed4a2f7c6d0cd69ccbd&")
         embed.set_image(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488459492730474618/image.png?ex=69ccdb6d&is=69cb89ed&hm=2e9ffb4bb0e511c8fce507e822b6a44a2f6c68561175bfe7154ad6a349427c56&")
-        # embed.set_thumbnail(url="https://yt3.googleusercontent.com/Nw2kKyqls4sc8kTQWwfIEBAl_Igg-94HgBwdDGDPcK5OuH9vN7svRyHe2Dv6ojY17AJSnGLfTw=s900-c-k-c0x00ffffff-no-rj")
-        # embed.set_thumbnail(url="https://media.discordapp.net/attachments/1259591457040502788/1488457138803179670/image.png?ex=69ccd93c&is=69cb87bc&hm=10caadab2daa23c72d4c995c68e292a2eaa34648e8a9b38e8902efcaae6f1188&=&format=webp&quality=lossless&width=1334&height=1330")
-        # embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1259591457040502788/1488456636094877716/hi_112.png?ex=69ccd8c4&is=69cb8744&hm=409fa379b0d321bafb871dbf0ff3c56d57d855d44a9c8324d63a8c8e8d4cb701&")
         embed.set_thumbnail(url="https://media.discordapp.net/attachments/1259591457040502788/1488461433099386980/Your_paragraph_text_12.png?ex=69ccdd3b&is=69cb8bbb&hm=6b6b56d571618694816ce6ac5e651f70fc4c8653afcc34bd4522209e45578d00&=&format=webp&quality=lossless")
         pages.append(embed)
 
@@ -188,11 +173,11 @@ class Leaderboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def _build_guild_pages(
-        self, guild: discord.Guild, players_per_page: int = PLAYERS_PER_PAGE
+    async def _build_global_pages(
+        self, players_per_page: int = PLAYERS_PER_PAGE
     ) -> list[discord.Embed]:
-        """Fetch all data for a guild, refresh stale entries, and build embed pages."""
-        registrations = await self.bot.db.get_all_registrations(guild.id)
+        """Fetch all registered players globally, refresh stale entries, and build embed pages."""
+        registrations = await self.bot.db.get_all_registrations()
         if not registrations:
             return [
                 discord.Embed(
@@ -203,19 +188,19 @@ class Leaderboard(commands.Cog):
             ]
 
         # Collect all (puuid, region) pairs we need
-        needed: list[tuple[str, str]] = []  # (puuid, region)
+        needed: list[tuple[str, str]] = []
         for reg in registrations:
             needed.append((reg["puuid"], "NA"))
 
         linked_map: dict[int, list[dict[str, Any]]] = {}
         for reg in registrations:
-            linked = await self.bot.db.get_linked_accounts(guild.id, reg["discord_id"])
+            linked = await self.bot.db.get_linked_accounts(reg["discord_id"])
             if linked:
                 linked_map[reg["discord_id"]] = linked
                 for acct in linked:
                     needed.append((acct["puuid"], acct["region"]))
 
-        # Refresh any stale cache entries for this specific set of players
+        # Refresh any stale cache entries
         now = int(time.time())
         rank_cache: dict[tuple[str, str], dict[str, Any]] = {}
         for puuid, region in needed:
@@ -243,13 +228,15 @@ class Leaderboard(commands.Cog):
 
         sorted_regs = sorted(registrations, key=_score, reverse=True)
 
-        # Build member display name map
-        member_map: dict[int, discord.Member] = {
-            m.id: m for m in guild.members
-        }
+        # Build user display name map — try bot cache first, fall back to mention
+        user_map: dict[int, discord.User | discord.Member] = {}
+        for reg in registrations:
+            user = self.bot.get_user(reg["discord_id"])
+            if user:
+                user_map[reg["discord_id"]] = user
 
         return build_leaderboard_pages(
-            sorted_regs, linked_map, rank_cache, guild.name, member_map, players_per_page
+            sorted_regs, linked_map, rank_cache, user_map, players_per_page
         )
 
     # ------------------------------------------------------------------ #
@@ -258,12 +245,12 @@ class Leaderboard(commands.Cog):
 
     @app_commands.command(
         name="leaderboard",
-        description="Show the TFT rank leaderboard for this server.",
+        description="Show the global TFT rank leaderboard.",
     )
     async def leaderboard(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        pages = await self._build_guild_pages(interaction.guild)
+        pages = await self._build_global_pages()
 
         if len(pages) == 1:
             await interaction.followup.send(embed=pages[0], ephemeral=True)
@@ -290,11 +277,11 @@ class Leaderboard(commands.Cog):
         await interaction.response.defer()
 
         target = member or interaction.user
-        reg = await self.bot.db.get_registration(interaction.guild_id, target.id)
+        reg = await self.bot.db.get_registration(target.id)
         if not reg:
             name = target.display_name
             await interaction.followup.send(
-                f"**{name}** is not registered on this server's leaderboard. "
+                f"**{name}** is not registered on the leaderboard. "
                 "They can use `/register` to join.",
                 ephemeral=True,
             )
@@ -345,7 +332,7 @@ class Leaderboard(commands.Cog):
                 )
 
         # Linked accounts
-        linked = await self.bot.db.get_linked_accounts(interaction.guild_id, target.id)
+        linked = await self.bot.db.get_linked_accounts(target.id)
         for acct in linked:
             cache = await self.bot.db.get_rank_cache(acct["puuid"], acct["region"])
             # Refresh if stale
@@ -383,13 +370,13 @@ class Leaderboard(commands.Cog):
     # ------------------------------------------------------------------ #
 
     async def post_leaderboard_to_channel(
-        self, channel: discord.TextChannel, guild: discord.Guild, last_message_id: int | None
+        self, channel: discord.TextChannel, last_message_id: int | None
     ) -> int | None:
         """
         Post or edit the leaderboard in the given channel.
         Returns the message id of the posted/edited message.
         """
-        pages = await self._build_guild_pages(guild, players_per_page=AUTO_POST_PLAYERS_PER_PAGE)
+        pages = await self._build_global_pages(players_per_page=AUTO_POST_PLAYERS_PER_PAGE)
         embed = pages[0]
         # Add page count hint to footer for auto-posts
         if len(pages) > 1:

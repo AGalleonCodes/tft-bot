@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 import aiosqlite
 
 from config import DB_PATH
+
+log = logging.getLogger(__name__)
 
 
 class Database:
@@ -26,27 +29,31 @@ class Database:
             self._db = None
 
     async def _create_tables(self) -> None:
+        # Check if we need to migrate from the old per-guild schema
+        async with self._db.execute("PRAGMA table_info(registrations)") as cur:
+            cols = [row[1] for row in await cur.fetchall()]
+
+        if "guild_id" in cols:
+            await self._migrate_to_global()
+
         await self._db.executescript("""
             CREATE TABLE IF NOT EXISTS registrations (
-                guild_id       INTEGER NOT NULL,
-                discord_id     INTEGER NOT NULL,
+                discord_id     INTEGER PRIMARY KEY,
                 game_name      TEXT    NOT NULL,
                 tag_line       TEXT    NOT NULL,
-                puuid          TEXT    NOT NULL,
-                PRIMARY KEY (guild_id, discord_id)
+                puuid          TEXT    NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS linked_accounts (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                guild_id       INTEGER NOT NULL,
                 discord_id     INTEGER NOT NULL,
                 region         TEXT    NOT NULL,
                 game_name      TEXT    NOT NULL,
                 tag_line       TEXT    NOT NULL,
                 puuid          TEXT    NOT NULL,
-                UNIQUE (guild_id, discord_id, region),
-                FOREIGN KEY (guild_id, discord_id)
-                    REFERENCES registrations(guild_id, discord_id)
+                UNIQUE (discord_id, region),
+                FOREIGN KEY (discord_id)
+                    REFERENCES registrations(discord_id)
                     ON DELETE CASCADE
             );
 
@@ -72,13 +79,48 @@ class Database:
         """)
         await self._db.commit()
 
+    async def _migrate_to_global(self) -> None:
+        """Migrate from per-guild schema (guild_id in registrations/linked_accounts) to global."""
+        log.info("Migrating database to global (guild-agnostic) schema...")
+        # Disable FK enforcement during migration
+        await self._db.execute("PRAGMA foreign_keys=OFF")
+        await self._db.executescript("""
+            CREATE TABLE IF NOT EXISTS registrations_new (
+                discord_id INTEGER PRIMARY KEY,
+                game_name  TEXT NOT NULL,
+                tag_line   TEXT NOT NULL,
+                puuid      TEXT NOT NULL
+            );
+            INSERT OR IGNORE INTO registrations_new (discord_id, game_name, tag_line, puuid)
+                SELECT discord_id, game_name, tag_line, puuid FROM registrations;
+            DROP TABLE registrations;
+            ALTER TABLE registrations_new RENAME TO registrations;
+
+            CREATE TABLE IF NOT EXISTS linked_accounts_new (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER NOT NULL,
+                region     TEXT NOT NULL,
+                game_name  TEXT NOT NULL,
+                tag_line   TEXT NOT NULL,
+                puuid      TEXT NOT NULL,
+                UNIQUE (discord_id, region),
+                FOREIGN KEY (discord_id) REFERENCES registrations(discord_id) ON DELETE CASCADE
+            );
+            INSERT OR IGNORE INTO linked_accounts_new (discord_id, region, game_name, tag_line, puuid)
+                SELECT discord_id, region, game_name, tag_line, puuid FROM linked_accounts;
+            DROP TABLE linked_accounts;
+            ALTER TABLE linked_accounts_new RENAME TO linked_accounts;
+        """)
+        await self._db.execute("PRAGMA foreign_keys=ON")
+        await self._db.commit()
+        log.info("Migration to global schema complete.")
+
     # ------------------------------------------------------------------ #
     # Registrations                                                         #
     # ------------------------------------------------------------------ #
 
     async def upsert_registration(
         self,
-        guild_id: int,
         discord_id: int,
         game_name: str,
         tag_line: str,
@@ -86,39 +128,35 @@ class Database:
     ) -> None:
         await self._db.execute(
             """
-            INSERT INTO registrations (guild_id, discord_id, game_name, tag_line, puuid)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(guild_id, discord_id) DO UPDATE SET
+            INSERT INTO registrations (discord_id, game_name, tag_line, puuid)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(discord_id) DO UPDATE SET
                 game_name = excluded.game_name,
                 tag_line  = excluded.tag_line,
                 puuid     = excluded.puuid
             """,
-            (guild_id, discord_id, game_name, tag_line, puuid),
+            (discord_id, game_name, tag_line, puuid),
         )
         await self._db.commit()
 
-    async def delete_registration(self, guild_id: int, discord_id: int) -> bool:
+    async def delete_registration(self, discord_id: int) -> bool:
         cursor = await self._db.execute(
-            "DELETE FROM registrations WHERE guild_id = ? AND discord_id = ?",
-            (guild_id, discord_id),
+            "DELETE FROM registrations WHERE discord_id = ?",
+            (discord_id,),
         )
         await self._db.commit()
         return cursor.rowcount > 0
 
-    async def get_registration(
-        self, guild_id: int, discord_id: int
-    ) -> dict[str, Any] | None:
+    async def get_registration(self, discord_id: int) -> dict[str, Any] | None:
         async with self._db.execute(
-            "SELECT * FROM registrations WHERE guild_id = ? AND discord_id = ?",
-            (guild_id, discord_id),
+            "SELECT * FROM registrations WHERE discord_id = ?",
+            (discord_id,),
         ) as cur:
             row = await cur.fetchone()
             return dict(row) if row else None
 
-    async def get_all_registrations(self, guild_id: int) -> list[dict[str, Any]]:
-        async with self._db.execute(
-            "SELECT * FROM registrations WHERE guild_id = ?", (guild_id,)
-        ) as cur:
+    async def get_all_registrations(self) -> list[dict[str, Any]]:
+        async with self._db.execute("SELECT * FROM registrations") as cur:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
@@ -128,7 +166,6 @@ class Database:
 
     async def upsert_linked_account(
         self,
-        guild_id: int,
         discord_id: int,
         region: str,
         game_name: str,
@@ -138,33 +175,29 @@ class Database:
         await self._db.execute(
             """
             INSERT INTO linked_accounts
-                (guild_id, discord_id, region, game_name, tag_line, puuid)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(guild_id, discord_id, region) DO UPDATE SET
+                (discord_id, region, game_name, tag_line, puuid)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(discord_id, region) DO UPDATE SET
                 game_name = excluded.game_name,
                 tag_line  = excluded.tag_line,
                 puuid     = excluded.puuid
             """,
-            (guild_id, discord_id, region, game_name, tag_line, puuid),
+            (discord_id, region, game_name, tag_line, puuid),
         )
         await self._db.commit()
 
-    async def delete_linked_account(
-        self, guild_id: int, discord_id: int, region: str
-    ) -> bool:
+    async def delete_linked_account(self, discord_id: int, region: str) -> bool:
         cursor = await self._db.execute(
-            "DELETE FROM linked_accounts WHERE guild_id = ? AND discord_id = ? AND region = ?",
-            (guild_id, discord_id, region),
+            "DELETE FROM linked_accounts WHERE discord_id = ? AND region = ?",
+            (discord_id, region),
         )
         await self._db.commit()
         return cursor.rowcount > 0
 
-    async def get_linked_accounts(
-        self, guild_id: int, discord_id: int
-    ) -> list[dict[str, Any]]:
+    async def get_linked_accounts(self, discord_id: int) -> list[dict[str, Any]]:
         async with self._db.execute(
-            "SELECT * FROM linked_accounts WHERE guild_id = ? AND discord_id = ?",
-            (guild_id, discord_id),
+            "SELECT * FROM linked_accounts WHERE discord_id = ?",
+            (discord_id,),
         ) as cur:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
@@ -210,10 +243,7 @@ class Database:
             return dict(row) if row else None
 
     async def get_stale_cache_entries(self, cutoff: int) -> list[dict[str, Any]]:
-        """Return (puuid, region) pairs whose cache is older than cutoff and still active.
-
-        Uses EXISTS to avoid duplicates when the same account appears in multiple guilds.
-        """
+        """Return (puuid, region) pairs whose cache is older than cutoff and still active."""
         async with self._db.execute(
             """
             SELECT rc.puuid, rc.region
@@ -233,15 +263,14 @@ class Database:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
-    async def invalidate_guild_cache(self, guild_id: int) -> None:
-        """Set all cache entries for a guild's players to expired (updated_at = 0)."""
+    async def invalidate_all_cache(self) -> None:
+        """Set all cache entries for all registered players to expired (updated_at = 0)."""
         await self._db.execute(
             """
             UPDATE rank_cache SET updated_at = 0
-            WHERE puuid IN (SELECT puuid FROM registrations WHERE guild_id = ?)
-               OR puuid IN (SELECT puuid FROM linked_accounts WHERE guild_id = ?)
-            """,
-            (guild_id, guild_id),
+            WHERE puuid IN (SELECT puuid FROM registrations)
+               OR puuid IN (SELECT puuid FROM linked_accounts)
+            """
         )
         await self._db.commit()
 

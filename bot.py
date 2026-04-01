@@ -137,7 +137,7 @@ class TFTBot(commands.Bot):
 
             try:
                 msg_id = await leaderboard_cog.post_leaderboard_to_channel(
-                    channel, guild, settings.get("last_message_id")
+                    channel, settings.get("last_message_id")
                 )
                 await self.db.upsert_guild_settings(
                     settings["guild_id"],
