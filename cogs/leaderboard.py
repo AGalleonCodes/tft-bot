@@ -82,7 +82,7 @@ def _linked_suffix(
             else "Unranked"
         )
         parts.append(f"**{acct['region']}:** {acct['game_name']}#{acct['tag_line']} — {rank_str}")
-    return "\n".join(f"\t↳ {p}" for p in parts) if parts else ""
+    return "\n".join(f"↳ {p}" for p in parts) if parts else ""
 
 
 def build_leaderboard_pages(
@@ -135,15 +135,13 @@ def build_leaderboard_pages(
             user = discord_users.get(reg["discord_id"])
             display_name = user.display_name if user else f"<@{reg['discord_id']}>"
 
-            line = (
-                f"{medal} **{reg['game_name']}#{reg['tag_line']}** — {rank_str}\n"
-                f"　　{display_name}"
-            )
+            line = (f"{medal} **{reg['game_name']}#{reg['tag_line']}** — {rank_str}\n")
 
             linked = linked_map.get(reg["discord_id"], [])
             suffix = _linked_suffix(linked, rank_cache)
             if suffix:
-                line += f"\n{suffix}"
+                line += f"　　{suffix}\n"
+            line += f"　　{display_name}"
 
             lines.append(line)
 
