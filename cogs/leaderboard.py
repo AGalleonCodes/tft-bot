@@ -81,7 +81,7 @@ def _linked_suffix(
             if cache
             else "Unranked"
         )
-        parts.append(f"**{acct['region']}:** {acct['game_name']}#{acct['tag_line']} — {rank_str}")
+        parts.append(f"**{acct['region']}:** {acct['in_game_name']}#{acct['tag_line']} — {rank_str}")
     return "\n".join(f"↳ {p}" for p in parts) if parts else ""
 
 
@@ -135,7 +135,7 @@ def build_leaderboard_pages(
             user = discord_users.get(reg["discord_id"])
             display_name = user.display_name if user else f"<@{reg['discord_id']}>"
 
-            line = (f"{medal} **{reg['game_name']}#{reg['tag_line']}** — {rank_str}\n")
+            line = (f"{medal} **{reg['in_game_name']}#{reg['tag_line']}** — {rank_str}\n")
 
             linked = linked_map.get(reg["discord_id"], [])
             suffix = _linked_suffix(linked, rank_cache)
@@ -298,7 +298,7 @@ class Leaderboard(commands.Cog):
                 )
                 na_cache = await self.bot.db.get_rank_cache(reg["puuid"], "NA")
             except RiotAPIError as e:
-                log.warning("Rank refresh failed for %s: %s", reg["game_name"], e)
+                log.warning("Rank refresh failed for %s: %s", reg["in_game_name"], e)
 
         tier = (na_cache or {}).get("tier")
         division = (na_cache or {}).get("division")
@@ -310,7 +310,7 @@ class Leaderboard(commands.Cog):
         color = TIER_COLORS.get(tier or "UNRANKED", 0x2B2D31)
 
         embed = discord.Embed(
-            title=f"{reg['game_name']}#{reg['tag_line']}",
+            title=f"{reg['in_game_name']}#{reg['tag_line']}",
             color=color,
         )
         embed.set_author(
@@ -352,7 +352,7 @@ class Leaderboard(commands.Cog):
             )
             embed.add_field(
                 name=f"🌐 {acct['region']} (Linked)",
-                value=f"{acct['game_name']}#{acct['tag_line']}\n{linked_rank}",
+                value=f"{acct['in_game_name']}#{acct['tag_line']}\n{linked_rank}",
                 inline=True,
             )
 

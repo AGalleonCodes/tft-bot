@@ -25,22 +25,22 @@ class Registration(commands.Cog):
         description="Register your NA TFT account to the global leaderboard.",
     )
     @app_commands.describe(
-        game_name="Your Riot Games username (the part before #)",
+        in_game_name="Your Riot Games username (the part before #)",
         tag_line="Your Riot tag (the part after #, e.g. NA1)",
     )
     async def register(
         self,
         interaction: discord.Interaction,
-        game_name: str,
+        in_game_name: str,
         tag_line: str,
     ) -> None:
         await interaction.response.defer(ephemeral=True)
 
         try:
-            data = await self.bot.riot.resolve_player(game_name, tag_line, region="NA")
+            data = await self.bot.riot.resolve_player(in_game_name, tag_line, region="NA")
         except NotFoundError:
             await interaction.followup.send(
-                f"Could not find Riot account **{game_name}#{tag_line}**. "
+                f"Could not find Riot account **{in_game_name}#{tag_line}**. "
                 "Double-check your username and tag.",
                 ephemeral=True,
             )
@@ -53,7 +53,7 @@ class Registration(commands.Cog):
 
         await self.bot.db.upsert_registration(
             discord_id=interaction.user.id,
-            game_name=data["game_name"],
+            in_game_name=data["in_game_name"],
             tag_line=data["tag_line"],
             puuid=data["puuid"],
         )
@@ -72,7 +72,7 @@ class Registration(commands.Cog):
         embed = discord.Embed(
             title="✅ Registered!",
             description=(
-                f"**{data['game_name']}#{data['tag_line']}** has been added to "
+                f"**{data['in_game_name']}#{data['tag_line']}** has been added to "
                 "the TFT leaderboard."
             ),
             color=color,
@@ -119,7 +119,7 @@ class Registration(commands.Cog):
     )
     @app_commands.describe(
         region="The region of the account you want to link (e.g. KR, EUW, EUNE)",
-        game_name="Riot username for that account (part before #)",
+        in_game_name="Riot username for that account (part before #)",
         tag_line="Riot tag for that account (part after #)",
     )
     @app_commands.choices(
@@ -129,7 +129,7 @@ class Registration(commands.Cog):
         self,
         interaction: discord.Interaction,
         region: str,
-        game_name: str,
+        in_game_name: str,
         tag_line: str,
     ) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -144,10 +144,10 @@ class Registration(commands.Cog):
             return
 
         try:
-            data = await self.bot.riot.resolve_player(game_name, tag_line, region=region)
+            data = await self.bot.riot.resolve_player(in_game_name, tag_line, region=region)
         except NotFoundError:
             await interaction.followup.send(
-                f"Could not find account **{game_name}#{tag_line}** in **{region}**.",
+                f"Could not find account **{in_game_name}#{tag_line}** in **{region}**.",
                 ephemeral=True,
             )
             return
@@ -160,7 +160,7 @@ class Registration(commands.Cog):
         await self.bot.db.upsert_linked_account(
             discord_id=interaction.user.id,
             region=region,
-            game_name=data["game_name"],
+            in_game_name=data["in_game_name"],
             tag_line=data["tag_line"],
             puuid=data["puuid"],
         )
@@ -178,7 +178,7 @@ class Registration(commands.Cog):
         embed = discord.Embed(
             title=f"✅ {region} Account Linked",
             description=(
-                f"**{data['game_name']}#{data['tag_line']}** ({region}) will appear "
+                f"**{data['in_game_name']}#{data['tag_line']}** ({region}) will appear "
                 "alongside your NA rank on the leaderboard."
             ),
             color=TIER_COLORS.get(data["tier"] or "UNRANKED", 0x2B2D31),
@@ -248,7 +248,7 @@ class Registration(commands.Cog):
         )
         embed.add_field(
             name="🇺🇸 NA (Primary)",
-            value=f"**{reg['game_name']}#{reg['tag_line']}**\n{na_rank}",
+            value=f"**{reg['in_game_name']}#{reg['tag_line']}**\n{na_rank}",
             inline=False,
         )
 
@@ -262,7 +262,7 @@ class Registration(commands.Cog):
             )
             embed.add_field(
                 name=f"🌐 {acct['region']} (Linked)",
-                value=f"**{acct['game_name']}#{acct['tag_line']}**\n{rank_str}",
+                value=f"**{acct['in_game_name']}#{acct['tag_line']}**\n{rank_str}",
                 inline=False,
             )
 

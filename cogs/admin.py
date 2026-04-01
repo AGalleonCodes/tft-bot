@@ -194,7 +194,7 @@ class Admin(commands.Cog):
                 success += 1
             except RiotAPIError as e:
                 log.warning(
-                    "force-refresh failed for %s: %s", reg["game_name"], e
+                    "force-refresh failed for %s: %s", reg["in_game_name"], e
                 )
                 failed += 1
 

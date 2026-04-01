@@ -3096,3 +3096,465 @@ The file /Users/ag/codin/tft-bot-claude/cogs/admin.py has been updated successfu
 _**Agent (claude-sonnet-4-6 2026-04-01 00:46:23Z)**_
 
 Done. The picker in Discord will now show all channel types, but the `isinstance(target, discord.TextChannel)` check on the next line will still reject anything that isn't a text channel with "Please specify a text channel."
+
+---
+
+_**User (2026-04-01 01:34:03Z)**_
+
+<ide_opened_file>The user opened the file /Users/ag/codin/tft-bot-claude/config.py in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+can you list out all admin commands and what they do?
+
+---
+
+_**Agent (claude-sonnet-4-6 2026-04-01 01:34:10Z)**_
+
+Based on [cogs/admin.py](cogs/admin.py):
+
+| Command | Permission | What it does |
+|---|---|---|
+| `/set-channel [channel]` | Manage Guild | Sets the channel for auto-posting the leaderboard. Defaults to the current channel if none specified. |
+| `/set-interval <minutes>` | Manage Guild | Sets how often the leaderboard auto-posts (10–1440 min). |
+| `/disable-autopost` | Manage Guild | Stops auto-posting in this server (clears channel config). |
+| `/force-post` | Manage Guild | Immediately posts the leaderboard to the configured channel. |
+| `/force-refresh` | Manage Guild | Invalidates all cached ranks and re-fetches everyone from the Riot API. |
+| `/remove-player <member>` | Manage Guild | Removes a player from the global leaderboard. |
+| `/leaderboard-status` | Manage Guild | Shows this server's auto-post channel, interval, and the global player count. |
+
+---
+
+_**User (2026-04-01 01:34:21Z)**_
+
+can you list out all commands and what they do?
+
+---
+
+_**Agent (claude-sonnet-4-6 2026-04-01 01:34:30Z)**_
+
+Based on all three cogs:
+
+**Registration** ([cogs/registration.py](cogs/registration.py))
+
+| Command | What it does |
+|---|---|
+| `/register <game_name> <tag_line>` | Adds your NA TFT account to the global leaderboard. |
+| `/unregister` | Removes yourself from the leaderboard. |
+| `/link-region <region> <game_name> <tag_line>` | Links a non-NA account to display alongside your NA rank. |
+| `/unlink-region <region>` | Removes a linked regional account. |
+| `/my-accounts` | Shows your registered NA account and all linked regional accounts with current ranks. |
+
+**Leaderboard** ([cogs/leaderboard.py](cogs/leaderboard.py))
+
+| Command | What it does |
+|---|---|
+| `/leaderboard` | Shows the paginated global TFT rank leaderboard (ephemeral). |
+| `/rank [member]` | Shows a specific player's rank and win rate. Defaults to yourself. |
+
+**Admin** ([cogs/admin.py](cogs/admin.py)) — requires Manage Guild
+
+| Command | What it does |
+|---|---|
+| `/set-channel [channel]` | Sets the channel for auto-posting the leaderboard. |
+| `/set-interval <minutes>` | Sets the auto-post interval (10–1440 min). |
+| `/disable-autopost` | Disables auto-posting for this server. |
+| `/force-post` | Immediately posts the leaderboard to the configured channel. |
+| `/force-refresh` | Re-fetches all player ranks from the Riot API. |
+| `/remove-player <member>` | Removes a player from the global leaderboard. |
+| `/leaderboard-status` | Shows this server's auto-post config and global player count. |
+
+---
+
+_**User (2026-04-01 02:11:22Z)**_
+
+<ide_opened_file>The user opened the file /Users/ag/codin/tft-bot-claude/riot_client.py in the IDE. This may or may not be related to the current task.</ide_opened_file>
+
+change game_name to in_game_name
+
+---
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:11:26Z)**_
+
+<think><details><summary>Thought Process</summary>
+The user wants to rename `game_name` to `in_game_name`. This is a field name used throughout the codebase in database records, riot client responses, and display code. Let me search for all occurrences.
+</details></think>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:11:26Z)**_
+
+<tool-use data-tool-type="search" data-tool-name="Grep"><details>
+<summary>Tool use: **Grep**</summary>
+ pattern `game_name`
+
+```text
+cogs/admin.py:197:                    "force-refresh failed for %s: %s", reg["game_name"], e
+cogs/leaderboard.py:84:        parts.append(f"**{acct['region']}:** {acct['game_name']}#{acct['tag_line']} — {rank_str}")
+cogs/leaderboard.py:138:            line = (f"{medal} **{reg['game_name']}#{reg['tag_line']}** — {rank_str}\n")
+cogs/leaderboard.py:301:                log.warning("Rank refresh failed for %s: %s", reg["game_name"], e)
+cogs/leaderboard.py:313:            title=f"{reg['game_name']}#{reg['tag_line']}",
+cogs/leaderboard.py:355:                value=f"{acct['game_name']}#{acct['tag_line']}\n{linked_rank}",
+database.py:42:                game_name      TEXT    NOT NULL,
+database.py:51:                game_name      TEXT    NOT NULL,
+database.py:90:                game_name  TEXT NOT NULL,
+database.py:94:            INSERT OR IGNORE INTO registrations_new (discord_id, game_name, tag_line, puuid)
+database.py:95:                SELECT discord_id, game_name, tag_line, puuid FROM registrations;
+database.py:103:                game_name  TEXT NOT NULL,
+database.py:109:            INSERT OR IGNORE INTO linked_accounts_new (discord_id, region, game_name, tag_line, puuid)
+database.py:110:                SELECT discord_id, region, game_name, tag_line, puuid FROM linked_accounts;
+database.py:125:        game_name: str,
+database.py:131:            INSERT INTO registrations (discord_id, game_name, tag_line, puuid)
+database.py:134:                game_name = excluded.game_name,
+database.py:138:            (discord_id, game_name, tag_line, puuid),
+database.py:171:        game_name: str,
+database.py:178:                (discord_id, region, game_name, tag_line, puuid)
+database.py:181:                game_name = excluded.game_name,
+database.py:185:            (discord_id, region, game_name, tag_line, puuid),
+riot_client.py:57:        self, game_name: str, tag_line: str, region: str = "NA"
+riot_client.py:63:            f"/{game_name}/{tag_line}"
+riot_client.py:83:        self, game_name: str, tag_line: str, region: str = "NA"
+riot_client.py:89:        account = await self.get_account_by_riot_id(game_name, tag_line, region)
+riot_client.py:92:        game_name = account["gameName"]
+riot_client.py:99:            "game_name": game_name,
+cogs/registration.py:28:        game_name="Your Riot Games username (the part before #)",
+cogs/registration.py:34:        game_name: str,
+cogs/registration.py:40:            data = await self.bot.riot.resolve_player(game_name, tag_line, region="NA")
+cogs/registration.py:43:                f"Could not find Riot account **{game_name}#{tag_line}**. "
+cogs/registration.py:56:            game_name=data["game_name"],
+cogs/registration.py:75:                f"**{data['game_name']}#{data['tag_line']}** has been added to "
+cogs/registration.py:122:        game_name="Riot username for that account (part before #)",
+cogs/registration.py:132:        game_name: str,
+cogs/registration.py:147:            data = await self.bot.riot.resolve_player(game_name, tag_line, region=region)
+cogs/registration.py:150:                f"Could not find account **{game_name}#{tag_line}** in **{region}**.",
+cogs/registration.py:163:            game_name=data["game_name"],
+cogs/registration.py:181:                f"**{data['game_name']}#{data['tag_line']}** ({region}) will appear "
+cogs/registration.py:251:            value=f"**{reg['game_name']}#{reg['tag_line']}**\n{na_rank}",
+cogs/registration.py:265:                value=f"**{acct['game_name']}#{acct['tag_line']}**\n{rank_str}",
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:12:16Z)**_
+
+<think><details><summary>Thought Process</summary>
+This is a broad rename. I need to be careful about:
+
+1. `game_name` as a dict key (from DB rows, from riot_client response) → `in_game_name`
+2. `game_name` as a function parameter name → `in_game_name`  
+3. `game_name` as a SQL column name → `in_game_name`
+4. `game_name` as a slash command parameter description string (NOT to be renamed - that's user-visible text like `game_name="Your Riot Games username"`)
+
+Wait - in the `@app_commands.describe()` decorator, `game_name=` is actually a keyword argument that maps to the parameter name. 
+
+So if I rename the parameter `game_name` to `in_game_name`, I need to update the describe decorator too. But I should clarify what the request is really asking for—whether it's just the field/column/key name for the Riot game identifier, or if it spans across SQL columns, dict keys from database rows, function parameters, and the riot_client response. This could require a database migration if the column name itself needs to change.
+
+The trickiest part is the SQL column rename, but SQLite has supported `ALTER TABLE ... RENAME COLUMN` since version 3.25.0, so I can add a migration for that. I'll need to update the CREATE TABLE statements in database.py to use `in_game_name` instead of `game_name`, and then handle all the places where this field is referenced throughout the codebase.
+
+Now I'm going through each file to track down all the parameter names, dictionary keys, and SQL query references that need updating. In riot_client.py, the returned dictionary key and function parameter both need to change. The registration cog needs updates to the slash command parameter, the describe decorator, and all the data dictionary accesses. I'll need to do the same for leaderboard.py and any other files that reference this field.
+
+For the database migration, I need to handle the column rename carefully since the schema might be in different states depending on whether it's already been migrated to the global format or not. I'll add a migration step that checks if the `game_name` column exists before attempting to rename it to `in_game_name`.
+
+Using replace_all for straightforward dictionary key replacements where the context is clear...
+
+Actually, I need to be more careful with replace_all since it would catch things like the `describe` decorator's kwarg name, which should also be renamed to match the parameter name anyway.
+
+The real question is whether renaming the parameter to `in_game_name` changes what Discord shows users in the slash command UI, and if that's acceptable. Since the user asked to change `game_name` to `in_game_name` everywhere, I'll go ahead with a comprehensive rename across the codebase, starting with the database migration and then updating all the files systematically. I need to be careful with the migration SQL—when selecting from the old `registrations` table, I still reference `game_name`, but when inserting into the new `registrations_new` table, I use `in_game_name`. After this migration completes, I'll need another step to handle the final column rename.
+
+Actually, I think it's cleaner to add a second migration method that runs after `_migrate_to_global` specifically for renaming `game_name` to `in_game_name`. I'll check in `_create_tables` whether the column rename has happened yet, and if not, run that migration too. I need to implement the column rename migrations for both tables, using SQLite's ALTER TABLE RENAME COLUMN syntax. The tricky part is making sure the global migration SQL keeps using `game_name` for the old tables while the new table creation uses `in_game_name`, then the rename migration handles the conversion afterward. I'm realizing I need to be careful with the column name mapping since the INSERT statement references the new column name `in_game_name` but selects from the old `game_name` column. Rather than doing find-and-replace across the board, I should rewrite the database file entirely to ensure all the changes are applied correctly and consistently.
+</details></think>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:12:16Z)**_
+
+There are changes needed across all 5 files. The DB column also needs a rename migration for existing data. Let me do them all at once.
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:12:16Z)**_
+
+<tool-use data-tool-type="read" data-tool-name="Read"><details>
+<summary>Tool use: **Read**</summary>
+ `./riot_client.py`
+
+```text
+1	from __future__ import annotations
+2	
+3	import asyncio
+4	import logging
+5	from typing import Any
+6	
+7	import aiohttp
+8	
+9	from config import PLATFORM_HOSTS, REGIONAL_HOSTS
+10	
+11	log = logging.getLogger(__name__)
+12	
+13	
+14	class RiotAPIError(Exception):
+15	    def __init__(self, status: int, message: str):
+16	        self.status = status
+17	        self.message = message
+18	        super().__init__(f"Riot API {status}: {message}")
+19	
+20	
+21	class NotFoundError(RiotAPIError):
+22	    pass
+23	
+24	
+25	class RateLimitError(RiotAPIError):
+26	    def __init__(self, retry_after: int = 5):
+27	        self.retry_after = retry_after
+28	        super().__init__(429, f"Rate limited; retry after {retry_after}s")
+29	
+30	
+31	class RiotClient:
+32	    def __init__(self, session: aiohttp.ClientSession, api_key: str):
+33	        self._session = session
+34	        self._api_key = api_key
+35	        self._sem = asyncio.Semaphore(5)
+36	
+37	    async def _get(self, url: str) -> Any:
+38	        headers = {"X-Riot-Token": self._api_key}
+39	        async with self._sem:
+40	            async with self._session.get(url, headers=headers) as resp:
+41	                if resp.status == 200:
+42	                    return await resp.json()
+43	                if resp.status == 404:
+44	                    raise NotFoundError(404, "Not found")
+45	                if resp.status == 429:
+46	                    retry_after = int(resp.headers.get("Retry-After", "5"))
+47	                    raise RateLimitError(retry_after)
+48	                if resp.status == 403:
+49	                    raise RiotAPIError(403, "API key forbidden — check your Riot developer key")
+50	                if resp.status == 401:
+51	                    log.info("401 response: %s", resp)
+52	                    raise RiotAPIError(401, "API key unauthorized — key may be expired")
+53	                text = await resp.text()
+54	                raise RiotAPIError(resp.status, text[:200])
+55	
+56	    async def get_account_by_riot_id(
+57	        self, game_name: str, tag_line: str, region: str = "NA"
+58	    ) -> dict[str, Any]:
+59	        """Resolves gameName + tagLine → account data including puuid."""
+60	        regional = REGIONAL_HOSTS.get(region.upper(), "americas.api.riotgames.com")
+61	        url = (
+62	            f"https://{regional}/riot/account/v1/accounts/by-riot-id"
+63	            f"/{game_name}/{tag_line}"
+64	        )
+65	        return await self._get(url)
+66	
+67	    async def get_tft_rank_by_puuid(
+68	        self, puuid: str, region: str = "NA"
+69	    ) -> dict[str, Any] | None:
+70	        """
+71	        Returns the RANKED_TFT league entry for a puuid, or None if unranked.
+72	        Uses the PUUID-based endpoint added in Riot's 2024 API migration.
+73	        """
+74	        platform = PLATFORM_HOSTS.get(region.upper(), "na1.api.riotgames.com")
+75	        # url = f"https://{platform}/tft/league/v1/entries/by-puuid/{puuid}"
+76	        url = f"https://{platform}/tft/league/v1/by-puuid/{puuid}"
+77	        entries: list[dict] = await self._get(url)
+78	        return next(
+79	            (e for e in entries if e.get("queueType") == "RANKED_TFT"), None
+80	        )
+81	
+82	    async def resolve_player(
+83	        self, game_name: str, tag_line: str, region: str = "NA"
+84	    ) -> dict[str, Any]:
+85	        """
+86	        Full resolution: gameName#tagLine → {puuid, tier, division, lp, wins, losses}.
+87	        Raises RiotAPIError on any failure.
+88	        """
+89	        account = await self.get_account_by_riot_id(game_name, tag_line, region)
+90	        puuid: str = account["puuid"]
+91	        # Use canonical casing returned by Riot
+92	        game_name = account["gameName"]
+93	        tag_line = account["tagLine"]
+94	
+95	        rank_entry = await self.get_tft_rank_by_puuid(puuid, region)
+96	
+97	        return {
+98	            "puuid": puuid,
+99	            "game_name": game_name,
+100	            "tag_line": tag_line,
+101	            "tier": rank_entry["tier"] if rank_entry else None,
+102	            "division": rank_entry["rank"] if rank_entry else None,
+103	            "lp": rank_entry["leaguePoints"] if rank_entry else 0,
+104	            "wins": rank_entry["wins"] if rank_entry else 0,
+105	            "losses": rank_entry["losses"] if rank_entry else 0,
+106	        }
+107	
+108	    async def refresh_rank(self, puuid: str, region: str = "NA") -> dict[str, Any]:
+109	        """
+110	        Fetch only the rank for an already-resolved player by PUUID.
+111	        Returns dict with tier/division/lp/wins/losses (tier is None if unranked).
+112	        """
+113	        rank_entry = await self.get_tft_rank_by_puuid(puuid, region)
+114	        return {
+115	            "tier": rank_entry["tier"] if rank_entry else None,
+116	            "division": rank_entry["rank"] if rank_entry else None,
+117	            "lp": rank_entry["leaguePoints"] if rank_entry else 0,
+118	            "wins": rank_entry["wins"] if rank_entry else 0,
+119	            "losses": rank_entry["losses"] if rank_entry else 0,
+120	        }
+121
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:12:38Z)**_
+
+<think><details><summary>Thought Process</summary>
+Now I have a complete picture. Let me make all the changes:
+
+1. `riot_client.py`: rename `game_name` local var and dict key `"game_name"` → `"in_game_name"`. Note the function parameters `game_name: str` in `get_account_by_riot_id` and `resolve_player` are just local names for the input, not the output dict key. I should rename those too for consistency. Actually the user said "change game_name to in_game_name" - I'll rename everything.
+
+2. `database.py`: rename SQL column, add migration, rename Python params
+
+
+3. `cogs/registration.py`: rename dict keys and parameters
+4. `cogs/leaderboard.py`: rename dict keys
+5. `cogs/admin.py`: rename dict key
+
+I need to handle all files carefully, using replace_all where safe but being cautious with the migration SQL in database.py. For `riot_client.py`, the `game_name` parameter used in URL construction also needs renaming since it's part of the API path. Let me write all the files now.
+
+For the migration in database.py, I need to be careful about the column names during the transition—the old `registrations` table still uses `game_name`, so the SELECT statement pulls from that, while the INSERT into the new table uses `in_game_name`. After the migration completes and the table is renamed, everything will use the new column name. I'll need a second migration to handle any remaining references.
+
+I'm structuring `_create_tables` to handle all possible states: first check if the old guild-based schema exists and migrate it, then check if `game_name` still exists and rename it to `in_game_name`, and finally create any missing tables with the correct schema. This covers fresh databases, partially migrated ones, and fully updated ones without breaking anything.
+</details></think>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:12:38Z)**_
+
+Now I have everything I need. I'll update all 5 files in parallel.
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:13:21Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/riot_client.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:14:06Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/riot_client.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:14:10Z)**_
+
+Now update database.py — add a column rename migration and update all SQL/Python references:
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:07Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/database.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:29Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/database.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:32Z)**_
+
+Now update the upsert methods in database.py:
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:40Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/database.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:54Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/database.py has been updated successfully.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:15:57Z)**_
+
+Now update the three cogs with `replace_all`:
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:16:08Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/cogs/registration.py has been updated. All occurrences were successfully replaced.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:17:28Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/cogs/leaderboard.py has been updated. All occurrences were successfully replaced.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:17:35Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Edit"><details>
+<summary>Tool use: **Edit**</summary>
+
+```text
+The file /Users/ag/codin/tft-bot-claude/cogs/admin.py has been updated. All occurrences were successfully replaced.
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:17:40Z)**_
+
+Let me verify the registration cog looks right since it has the most complex usage (slash command parameter names):
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:17:41Z)**_
+
+<tool-use data-tool-type="search" data-tool-name="Grep"><details>
+<summary>Tool use: **Grep**</summary>
+ path `./cogs/registration.py` pattern `in_game_name`
+
+```text
+28:        in_game_name="Your Riot Games username (the part before #)",
+34:        in_game_name: str,
+40:            data = await self.bot.riot.resolve_player(in_game_name, tag_line, region="NA")
+43:                f"Could not find Riot account **{in_game_name}#{tag_line}**. "
+56:            in_game_name=data["in_game_name"],
+75:                f"**{data['in_game_name']}#{data['tag_line']}** has been added to "
+122:        in_game_name="Riot username for that account (part before #)",
+132:        in_game_name: str,
+147:            data = await self.bot.riot.resolve_player(in_game_name, tag_line, region=region)
+150:                f"Could not find account **{in_game_name}#{tag_line}** in **{region}**.",
+163:            in_game_name=data["in_game_name"],
+181:                f"**{data['in_game_name']}#{data['tag_line']}** ({region}) will appear "
+251:            value=f"**{reg['in_game_name']}#{reg['tag_line']}**\n{na_rank}",
+265:                value=f"**{acct['in_game_name']}#{acct['tag_line']}**\n{rank_str}",
+```
+</details></tool-use>
+
+_**Agent (claude-sonnet-4-6 2026-04-01 02:17:47Z)**_
+
+All good. Everything is updated:
+
+- **`riot_client.py`** — `resolve_player`/`get_account_by_riot_id` parameters and the returned dict key
+- **`database.py`** — SQL column names in all CREATE TABLE statements, all INSERT/UPDATE queries, and Python parameter names. Two auto-migrations will run on startup:
+  1. If the old per-guild schema exists → converts to global (using `in_game_name` in the new tables)
+  2. If the global schema still has the old `game_name` column → `ALTER TABLE ... RENAME COLUMN`
+- **All three cogs** — every `reg["game_name"]`, `acct["game_name"]`, `data["game_name"]`, and slash command parameter names updated

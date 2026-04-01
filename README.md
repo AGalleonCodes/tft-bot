@@ -70,9 +70,9 @@ On first start the bot will create `tft.db`, sync slash commands globally (propa
 
 | Command | Description |
 |---|---|
-| `/register <game_name> <tag_line>` | Register your NA TFT account to this server's leaderboard |
+| `/register <in_game_name> <tag_line>` | Register your NA TFT account to this server's leaderboard |
 | `/unregister` | Remove yourself from this server's leaderboard |
-| `/link-region <region> <game_name> <tag_line>` | Attach a non-NA account to display alongside your NA rank |
+| `/link-region <region> <in_game_name> <tag_line>` | Attach a non-NA account to display alongside your NA rank |
 | `/unlink-region <region>` | Remove a linked regional account |
 | `/my-accounts` | View your registered NA account and all linked accounts with their ranks |
 | `/leaderboard` | Show the full paginated leaderboard for this server |

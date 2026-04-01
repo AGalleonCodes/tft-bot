@@ -54,13 +54,13 @@ class RiotClient:
                 raise RiotAPIError(resp.status, text[:200])
 
     async def get_account_by_riot_id(
-        self, game_name: str, tag_line: str, region: str = "NA"
+        self, in_game_name: str, tag_line: str, region: str = "NA"
     ) -> dict[str, Any]:
         """Resolves gameName + tagLine → account data including puuid."""
         regional = REGIONAL_HOSTS.get(region.upper(), "americas.api.riotgames.com")
         url = (
             f"https://{regional}/riot/account/v1/accounts/by-riot-id"
-            f"/{game_name}/{tag_line}"
+            f"/{in_game_name}/{tag_line}"
         )
         return await self._get(url)
 
@@ -80,23 +80,23 @@ class RiotClient:
         )
 
     async def resolve_player(
-        self, game_name: str, tag_line: str, region: str = "NA"
+        self, in_game_name: str, tag_line: str, region: str = "NA"
     ) -> dict[str, Any]:
         """
         Full resolution: gameName#tagLine → {puuid, tier, division, lp, wins, losses}.
         Raises RiotAPIError on any failure.
         """
-        account = await self.get_account_by_riot_id(game_name, tag_line, region)
+        account = await self.get_account_by_riot_id(in_game_name, tag_line, region)
         puuid: str = account["puuid"]
         # Use canonical casing returned by Riot
-        game_name = account["gameName"]
+        in_game_name = account["gameName"]
         tag_line = account["tagLine"]
 
         rank_entry = await self.get_tft_rank_by_puuid(puuid, region)
 
         return {
             "puuid": puuid,
-            "game_name": game_name,
+            "in_game_name": in_game_name,
             "tag_line": tag_line,
             "tier": rank_entry["tier"] if rank_entry else None,
             "division": rank_entry["rank"] if rank_entry else None,

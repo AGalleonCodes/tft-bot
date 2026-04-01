@@ -36,10 +36,16 @@ class Database:
         if "guild_id" in cols:
             await self._migrate_to_global()
 
+        # Rename game_name → in_game_name if needed
+        async with self._db.execute("PRAGMA table_info(registrations)") as cur:
+            cols = [row[1] for row in await cur.fetchall()]
+        if "game_name" in cols:
+            await self._migrate_rename_game_name()
+
         await self._db.executescript("""
             CREATE TABLE IF NOT EXISTS registrations (
                 discord_id     INTEGER PRIMARY KEY,
-                game_name      TEXT    NOT NULL,
+                in_game_name   TEXT    NOT NULL,
                 tag_line       TEXT    NOT NULL,
                 puuid          TEXT    NOT NULL
             );
@@ -48,7 +54,7 @@ class Database:
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
                 discord_id     INTEGER NOT NULL,
                 region         TEXT    NOT NULL,
-                game_name      TEXT    NOT NULL,
+                in_game_name   TEXT    NOT NULL,
                 tag_line       TEXT    NOT NULL,
                 puuid          TEXT    NOT NULL,
                 UNIQUE (discord_id, region),
@@ -82,31 +88,30 @@ class Database:
     async def _migrate_to_global(self) -> None:
         """Migrate from per-guild schema (guild_id in registrations/linked_accounts) to global."""
         log.info("Migrating database to global (guild-agnostic) schema...")
-        # Disable FK enforcement during migration
         await self._db.execute("PRAGMA foreign_keys=OFF")
         await self._db.executescript("""
             CREATE TABLE IF NOT EXISTS registrations_new (
-                discord_id INTEGER PRIMARY KEY,
-                game_name  TEXT NOT NULL,
-                tag_line   TEXT NOT NULL,
-                puuid      TEXT NOT NULL
+                discord_id   INTEGER PRIMARY KEY,
+                in_game_name TEXT NOT NULL,
+                tag_line     TEXT NOT NULL,
+                puuid        TEXT NOT NULL
             );
-            INSERT OR IGNORE INTO registrations_new (discord_id, game_name, tag_line, puuid)
+            INSERT OR IGNORE INTO registrations_new (discord_id, in_game_name, tag_line, puuid)
                 SELECT discord_id, game_name, tag_line, puuid FROM registrations;
             DROP TABLE registrations;
             ALTER TABLE registrations_new RENAME TO registrations;
 
             CREATE TABLE IF NOT EXISTS linked_accounts_new (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                discord_id INTEGER NOT NULL,
-                region     TEXT NOT NULL,
-                game_name  TEXT NOT NULL,
-                tag_line   TEXT NOT NULL,
-                puuid      TEXT NOT NULL,
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id   INTEGER NOT NULL,
+                region       TEXT NOT NULL,
+                in_game_name TEXT NOT NULL,
+                tag_line     TEXT NOT NULL,
+                puuid        TEXT NOT NULL,
                 UNIQUE (discord_id, region),
                 FOREIGN KEY (discord_id) REFERENCES registrations(discord_id) ON DELETE CASCADE
             );
-            INSERT OR IGNORE INTO linked_accounts_new (discord_id, region, game_name, tag_line, puuid)
+            INSERT OR IGNORE INTO linked_accounts_new (discord_id, region, in_game_name, tag_line, puuid)
                 SELECT discord_id, region, game_name, tag_line, puuid FROM linked_accounts;
             DROP TABLE linked_accounts;
             ALTER TABLE linked_accounts_new RENAME TO linked_accounts;
@@ -115,6 +120,16 @@ class Database:
         await self._db.commit()
         log.info("Migration to global schema complete.")
 
+    async def _migrate_rename_game_name(self) -> None:
+        """Rename game_name column to in_game_name in registrations and linked_accounts."""
+        log.info("Renaming game_name → in_game_name...")
+        await self._db.executescript("""
+            ALTER TABLE registrations RENAME COLUMN game_name TO in_game_name;
+            ALTER TABLE linked_accounts RENAME COLUMN game_name TO in_game_name;
+        """)
+        await self._db.commit()
+        log.info("Column rename complete.")
+
     # ------------------------------------------------------------------ #
     # Registrations                                                         #
     # ------------------------------------------------------------------ #
@@ -122,20 +137,20 @@ class Database:
     async def upsert_registration(
         self,
         discord_id: int,
-        game_name: str,
+        in_game_name: str,
         tag_line: str,
         puuid: str,
     ) -> None:
         await self._db.execute(
             """
-            INSERT INTO registrations (discord_id, game_name, tag_line, puuid)
+            INSERT INTO registrations (discord_id, in_game_name, tag_line, puuid)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
-                game_name = excluded.game_name,
-                tag_line  = excluded.tag_line,
-                puuid     = excluded.puuid
+                in_game_name = excluded.in_game_name,
+                tag_line     = excluded.tag_line,
+                puuid        = excluded.puuid
             """,
-            (discord_id, game_name, tag_line, puuid),
+            (discord_id, in_game_name, tag_line, puuid),
         )
         await self._db.commit()
 
@@ -168,21 +183,21 @@ class Database:
         self,
         discord_id: int,
         region: str,
-        game_name: str,
+        in_game_name: str,
         tag_line: str,
         puuid: str,
     ) -> None:
         await self._db.execute(
             """
             INSERT INTO linked_accounts
-                (discord_id, region, game_name, tag_line, puuid)
+                (discord_id, region, in_game_name, tag_line, puuid)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(discord_id, region) DO UPDATE SET
-                game_name = excluded.game_name,
-                tag_line  = excluded.tag_line,
-                puuid     = excluded.puuid
+                in_game_name = excluded.in_game_name,
+                tag_line     = excluded.tag_line,
+                puuid        = excluded.puuid
             """,
-            (discord_id, region, game_name, tag_line, puuid),
+            (discord_id, region, in_game_name, tag_line, puuid),
         )
         await self._db.commit()
 
