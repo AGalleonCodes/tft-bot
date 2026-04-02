@@ -35,7 +35,7 @@ class TFTBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
         # message_content not needed — slash commands only
-        super().__init__(command_prefix=None, intents=intents, help_command=None)
+        super().__init__(command_prefix=[], intents=intents, help_command=None)
 
         self.db: Database = Database()
         self.riot: RiotClient | None = None
@@ -92,6 +92,7 @@ class TFTBot(commands.Bot):
 
     @tasks.loop(seconds=60)
     async def _background_loop(self) -> None:
+        assert self.riot is not None  # always set in setup_hook before loop starts
         now = int(time.time())
 
         # Step 1: Refresh stale cache entries
