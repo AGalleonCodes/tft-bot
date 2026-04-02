@@ -171,6 +171,29 @@ class Leaderboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def _get_leaderboard_position(self, discord_id: int) -> tuple[int, int]:
+        """
+        Returns (position, total) for a discord_id using cached rank data only.
+        Position is 1-indexed. Returns (0, total) if the player is not found.
+        """
+        registrations = await self.bot.db.get_all_registrations()
+        rank_cache: dict[tuple[str, str], dict[str, Any]] = {}
+        for r in registrations:
+            cached = await self.bot.db.get_rank_cache(r["puuid"], "NA")
+            if cached:
+                rank_cache[(r["puuid"], "NA")] = cached
+
+        def _score(r: dict[str, Any]) -> int:
+            c = rank_cache.get((r["puuid"], "NA"), {})
+            return rank_score(c.get("tier"), c.get("division"), c.get("lp", 0))
+
+        sorted_regs = sorted(registrations, key=_score, reverse=True)
+        position = next(
+            (i + 1 for i, r in enumerate(sorted_regs) if r["discord_id"] == discord_id),
+            0,
+        )
+        return position, len(registrations)
+
     async def _build_global_pages(
         self, players_per_page: int = PLAYERS_PER_PAGE
     ) -> list[discord.Embed]:
@@ -309,6 +332,9 @@ class Leaderboard(commands.Cog):
         rank_str = format_rank(tier, division, lp)
         color = TIER_COLORS.get(tier or "UNRANKED", 0x2B2D31)
 
+        position, total = await self._get_leaderboard_position(target.id)
+        medal = MEDALS.get(position, f"#{position}")
+
         embed = discord.Embed(
             title=f"{reg['in_game_name']}#{reg['tag_line']}",
             color=color,
@@ -317,6 +343,7 @@ class Leaderboard(commands.Cog):
             name=target.display_name,
             icon_url=target.display_avatar.url,
         )
+        embed.add_field(name="Position", value=f"{medal} of {total}", inline=True)
         embed.add_field(name="NA Rank", value=rank_str, inline=True)
 
         if tier:
@@ -391,31 +418,13 @@ class Leaderboard(commands.Cog):
             )
             return
 
-        registrations = await self.bot.db.get_all_registrations()
-        total = len(registrations)
+        position, total = await self._get_leaderboard_position(target.id)
 
-        # Build rank cache for all players (use cached values only — no refresh)
-        rank_cache: dict[tuple[str, str], dict[str, Any]] = {}
-        for r in registrations:
-            cached = await self.bot.db.get_rank_cache(r["puuid"], "NA")
-            if cached:
-                rank_cache[(r["puuid"], "NA")] = cached
-
-        def _score(r: dict[str, Any]) -> int:
-            c = rank_cache.get((r["puuid"], "NA"), {})
-            return rank_score(c.get("tier"), c.get("division"), c.get("lp", 0))
-
-        sorted_regs = sorted(registrations, key=_score, reverse=True)
-        position = next(
-            (i + 1 for i, r in enumerate(sorted_regs) if r["discord_id"] == target.id),
-            None,
-        )
-
-        na_cache = rank_cache.get((reg["puuid"], "NA"))
+        na_cache = await self.bot.db.get_rank_cache(reg["puuid"], "NA")
         tier = (na_cache or {}).get("tier")
         rank_str = format_rank(tier, (na_cache or {}).get("division"), (na_cache or {}).get("lp", 0))
         color = TIER_COLORS.get(tier or "UNRANKED", 0x2B2D31)
-        medal = MEDALS.get(position, f"#{position}") if position else f"#{position}"
+        medal = MEDALS.get(position, f"#{position}")
 
         embed = discord.Embed(
             title=f"{reg['in_game_name']}#{reg['tag_line']}",
