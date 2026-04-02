@@ -364,6 +364,72 @@ class Leaderboard(commands.Cog):
         await interaction.followup.send(embed=embed)
 
     # ------------------------------------------------------------------ #
+    # /position                                                             #
+    # ------------------------------------------------------------------ #
+
+    @app_commands.command(
+        name="position",
+        description="Check a player's position on the global leaderboard.",
+    )
+    @app_commands.describe(
+        member="The Discord member to look up (defaults to yourself)"
+    )
+    async def position(
+        self,
+        interaction: discord.Interaction,
+        member: Optional[discord.Member] = None,
+    ) -> None:
+        await interaction.response.defer()
+
+        target = member or interaction.user
+        reg = await self.bot.db.get_registration(target.id)
+        if not reg:
+            await interaction.followup.send(
+                f"**{target.display_name}** is not registered on the leaderboard. "
+                "They can use `/register` to join.",
+                ephemeral=True,
+            )
+            return
+
+        registrations = await self.bot.db.get_all_registrations()
+        total = len(registrations)
+
+        # Build rank cache for all players (use cached values only — no refresh)
+        rank_cache: dict[tuple[str, str], dict[str, Any]] = {}
+        for r in registrations:
+            cached = await self.bot.db.get_rank_cache(r["puuid"], "NA")
+            if cached:
+                rank_cache[(r["puuid"], "NA")] = cached
+
+        def _score(r: dict[str, Any]) -> int:
+            c = rank_cache.get((r["puuid"], "NA"), {})
+            return rank_score(c.get("tier"), c.get("division"), c.get("lp", 0))
+
+        sorted_regs = sorted(registrations, key=_score, reverse=True)
+        position = next(
+            (i + 1 for i, r in enumerate(sorted_regs) if r["discord_id"] == target.id),
+            None,
+        )
+
+        na_cache = rank_cache.get((reg["puuid"], "NA"))
+        tier = (na_cache or {}).get("tier")
+        rank_str = format_rank(tier, (na_cache or {}).get("division"), (na_cache or {}).get("lp", 0))
+        color = TIER_COLORS.get(tier or "UNRANKED", 0x2B2D31)
+        medal = MEDALS.get(position, f"#{position}") if position else f"#{position}"
+
+        embed = discord.Embed(
+            title=f"{reg['in_game_name']}#{reg['tag_line']}",
+            color=color,
+        )
+        embed.set_author(
+            name=target.display_name,
+            icon_url=target.display_avatar.url,
+        )
+        embed.add_field(name="Position", value=f"{medal} of {total}", inline=True)
+        embed.add_field(name="NA Rank", value=rank_str, inline=True)
+        await interaction.followup.send(embed=embed)
+
+    # ------------------------------------------------------------------ #
     # Auto-post helper (called by bot's background loop)                    #
     # ------------------------------------------------------------------ #
 
