@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 import discord
 from discord import app_commands
@@ -18,6 +18,9 @@ from config import (
     rank_score,
 )
 from riot_client import RiotAPIError
+
+if TYPE_CHECKING:
+    from bot import TFTBot
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +171,7 @@ def build_leaderboard_pages(
 # ------------------------------------------------------------------ #
 
 class Leaderboard(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: TFTBot):
         self.bot = bot
 
     async def _get_leaderboard_position(self, discord_id: int) -> tuple[int, int]:
@@ -222,6 +225,7 @@ class Leaderboard(commands.Cog):
                     needed.append((acct["puuid"], acct["region"]))
 
         # Refresh any stale cache entries
+        assert self.bot.riot is not None
         now = int(time.time())
         rank_cache: dict[tuple[str, str], dict[str, Any]] = {}
         for puuid, region in needed:
@@ -309,6 +313,7 @@ class Leaderboard(commands.Cog):
             return
 
         # Refresh NA rank if stale
+        assert self.bot.riot is not None
         now = int(time.time())
         na_cache = await self.bot.db.get_rank_cache(reg["puuid"], "NA")
         if not na_cache or (now - na_cache["updated_at"]) >= self.bot.cache_ttl:
@@ -357,6 +362,7 @@ class Leaderboard(commands.Cog):
                 )
 
         # Linked accounts
+        assert self.bot.riot is not None
         linked = await self.bot.db.get_linked_accounts(target.id)
         for acct in linked:
             cache = await self.bot.db.get_rank_cache(acct["puuid"], acct["region"])
@@ -470,5 +476,5 @@ class Leaderboard(commands.Cog):
         return msg.id
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: TFTBot) -> None:
     await bot.add_cog(Leaderboard(bot))

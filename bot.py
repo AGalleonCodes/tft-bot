@@ -63,7 +63,7 @@ class TFTBot(commands.Bot):
         log.info("Application commands synced.")
 
         # Start background loop
-        self._background_loop.start()
+        self._background_loop.start()  # type: ignore[union-attr]
 
     async def on_ready(self) -> None:
         assert self.user is not None
@@ -78,7 +78,7 @@ class TFTBot(commands.Bot):
         log.info("Joined guild: %s (ID: %s)", guild.name, guild.id)
 
     async def close(self) -> None:
-        self._background_loop.cancel()
+        self._background_loop.cancel()  # type: ignore[union-attr]
         if self._http_session:
             await self._http_session.close()
         await self.db.close()
@@ -157,7 +157,7 @@ class TFTBot(commands.Bot):
                     e,
                 )
 
-    @_background_loop.before_loop
+    @_background_loop.before_loop  # type: ignore[union-attr]
     async def _before_background_loop(self) -> None:
         await self.wait_until_ready()
 
